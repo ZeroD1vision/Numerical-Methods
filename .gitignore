@@ -1,0 +1,17 @@
+# Бинарники и сборка
+bin/
+obj/
+dist/
+*.exe
+*.out
+*.so
+*.o
+
+# Зависимости
+node_modules/
+vendor/
+
+# Локальные конфиги разработчика
+.env
+.vscode/
+.idea/
