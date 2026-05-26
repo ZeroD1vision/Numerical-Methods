@@ -76,7 +76,6 @@ func main() {
 	if useAutoSearch {
 		logger.Info("Запуск автоматического поиска интервала с изменением знака...")
 		var errInterval error
-		// используем реализацию из пакета solver
 		a, b, errInterval = solver.FindInterval(0.0, 1.0, 1000)
 		if errInterval != nil {
 			logger.Error(fmt.Sprintf("Критическая ошибка: %v", errInterval))
