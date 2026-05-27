@@ -92,8 +92,7 @@ func PowerIteration(A Matrix3x3, eps float64, maxIter int) []IterationRecord {
 	return history
 }
 
-// CharPolyRoots вычисляет все 3 СЗ через характеристический полином методом companion + итерации
-// Для симметричной 3×3 используем аналитический подход Cardano
+// CharPolyRoots вычисляет все 3 СЗ через характеристический полином
 func AllEigenvalues(A Matrix3x3) [3]float64 {
 	// Метод Якоби для симметричной матрицы
 	mat := A
