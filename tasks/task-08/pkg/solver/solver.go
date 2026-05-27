@@ -52,3 +52,56 @@ func ModifiedEuler(t0, y0, T float64, N int) []Point {
 	}
 	return pts
 }
+
+// RK4 решает ОДУ классическим методом Рунге-Кутты 4-го порядка.
+// Используется для генерации эталонного ("точного") решения с мелким шагом.
+func RK4(t0, y0, T float64, N int) []Point {
+	h := (T - t0) / float64(N)
+	pts := make([]Point, N+1)
+	pts[0] = Point{T: t0, Y: y0}
+
+	for i := 0; i < N; i++ {
+		t := pts[i].T
+		y := pts[i].Y
+
+		k1 := F(t, y)
+		k2 := F(t+h/2.0, y+h/2.0*k1)
+		k3 := F(t+h/2.0, y+h/2.0*k2)
+		k4 := F(t+h, y+h*k3)
+
+		pts[i+1] = Point{
+			T: t + h,
+			Y: y + (h/6.0)*(k1+2*k2+2*k3+k4),
+		}
+	}
+	return pts
+}
+
+// GetExactY принимает массив точек высокой точности и возвращает интерполированное
+// значение Y для конкретного t (нужно для отрисовки плавного точного графика).
+func GetExactY(exactPts []Point, t float64) float64 {
+	if t <= exactPts[0].T {
+		return exactPts[0].Y
+	}
+	if t >= exactPts[len(exactPts)-1].T {
+		return exactPts[len(exactPts)-1].Y
+	}
+
+	// Бинарный поиск нужного отрезка
+	low, high := 0, len(exactPts)-1
+	for high-low > 1 {
+		mid := (low + high) / 2
+		if exactPts[mid].T <= t {
+			low = mid
+		} else {
+			high = mid
+		}
+	}
+
+	// Линейная интерполяция между соседними точками эталона
+	p0, p1 := exactPts[low], exactPts[high]
+	if p1.T == p0.T {
+		return p0.Y
+	}
+	return p0.Y + (t-p0.T)*(p1.Y-p0.Y)/(p1.T-p0.T)
+}

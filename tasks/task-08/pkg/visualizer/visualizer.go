@@ -27,7 +27,7 @@ var palette = []color.Color{
 	color.RGBA{0x26, 0x8b, 0xd2, 0xff}, // 2: Синий — Метод Эйлера
 	color.RGBA{0xcb, 0x4b, 0x16, 0xff}, // 3: Оранжевый — Модифицированный Эйлера
 	color.RGBA{0x07, 0x36, 0x42, 0xff}, // 4: Основной текст
-	color.RGBA{0x85, 0x99, 0x00, 0xff}, // 5: Зеленый
+	color.RGBA{0x85, 0x99, 0x00, 0xff}, // 5: Зеленый — "Точное" решение (RK4)
 	color.RGBA{0x93, 0xa1, 0xa1, 0xff}, // 6: Вспомогательная сетка
 }
 
@@ -80,32 +80,26 @@ func drawText(img *image.Paletted, x, y int, text string, col color.Color) {
 	dr.DrawString(text)
 }
 
-// GenerateODEGIF создает анимацию решения ОДУ
-func GenerateODEGIF(filePath string, eulerPts, modEulerPts []solver.Point) error {
+// GenerateODEGIF создает анимацию решения ОДУ с добавлением точного решения
+func GenerateODEGIF(filePath string, eulerPts, modEulerPts, exactPts []solver.Point) error {
 	anim := gif.GIF{}
 
-	// Ищем экстремумы для масштабирования
+	// Ищем экстремумы среди всех трех графиков для масштабирования
 	minY, maxY := eulerPts[0].Y, eulerPts[0].Y
-	for _, p := range eulerPts {
-		if p.Y < minY {
-			minY = p.Y
-		}
-		if p.Y > maxY {
-			maxY = p.Y
-		}
-	}
-	for _, p := range modEulerPts {
-		if p.Y < minY {
-			minY = p.Y
-		}
-		if p.Y > maxY {
-			maxY = p.Y
+	allPoints := [][]solver.Point{eulerPts, modEulerPts, exactPts}
+	for _, pts := range allPoints {
+		for _, p := range pts {
+			if p.Y < minY {
+				minY = p.Y
+			}
+			if p.Y > maxY {
+				maxY = p.Y
+			}
 		}
 	}
 
 	minT, maxT := eulerPts[0].T, eulerPts[len(eulerPts)-1].T
 
-	// Отступы для графика, чтобы точки не прилипали к краям
 	yPadding := (maxY - minY) * 0.1
 	if yPadding == 0 {
 		yPadding = 1.0
@@ -129,11 +123,12 @@ func GenerateODEGIF(filePath string, eulerPts, modEulerPts []solver.Point) error
 		rect := image.Rect(0, 0, width, height)
 		img := image.NewPaletted(rect, palette)
 
-		drawText(img, margin, margin-20, "Task 07 | ODE Cauchy Problem | Euler vs Modified Euler", palette[4])
+		drawText(img, margin, margin-20, "Task 08 | ODE Cauchy Problem | Euler vs Mod. Euler vs Exact", palette[4])
 		drawText(img, margin, height-margin+30, "t", palette[4])
 		drawText(img, margin-20, margin-10, "y", palette[4])
 
-		// Легенда
+		// Обновленная легенда
+		drawText(img, width-margin-150, margin-35, "— Exact (RK4)", palette[5])
 		drawText(img, width-margin-150, margin-20, "— Euler", palette[2])
 		drawText(img, width-margin-150, margin-5, "— Mod. Euler", palette[3])
 
@@ -160,7 +155,25 @@ func GenerateODEGIF(filePath string, eulerPts, modEulerPts []solver.Point) error
 			drawText(img, margin-45, yy+5, fmt.Sprintf("%.2f", y), palette[4])
 		}
 
-		// Рисуем метод Эйлера (синий)
+		// 1. Рисуем НАСТОЯЩУЮ (точную) функцию на текущем промежутке времени (зеленый)
+		// Она рисуется пиксель в пиксель для идеальной плавности
+		currentMaxT := eulerPts[frame-1].T
+		var prevX, prevY int
+		first := true
+		for xx := margin; xx <= toX(currentMaxT); xx++ {
+			// Переводим экранный X назад в значение t
+			t := minT + float64(xx-margin)/float64(plotW)*(maxT-minT)
+			yExact := solver.GetExactY(exactPts, t)
+			yy := toY(yExact)
+
+			if !first {
+				drawLine(img, prevX, prevY, xx, yy, 5)
+			}
+			first = false
+			prevX, prevY = xx, yy
+		}
+
+		// 2. Рисуем метод Эйлера (синий)
 		for i := 1; i < frame; i++ {
 			x0, y0 := toX(eulerPts[i-1].T), toY(eulerPts[i-1].Y)
 			x1, y1 := toX(eulerPts[i].T), toY(eulerPts[i].Y)
@@ -169,7 +182,7 @@ func GenerateODEGIF(filePath string, eulerPts, modEulerPts []solver.Point) error
 		}
 		drawPoint(img, toX(eulerPts[0].T), toY(eulerPts[0].Y), 3, 2)
 
-		// Рисуем модифицированный Эйлер (оранжевый)
+		// 3. Рисуем модифицированный Эйлер (оранжевый)
 		for i := 1; i < frame; i++ {
 			x0, y0 := toX(modEulerPts[i-1].T), toY(modEulerPts[i-1].Y)
 			x1, y1 := toX(modEulerPts[i].T), toY(modEulerPts[i].Y)

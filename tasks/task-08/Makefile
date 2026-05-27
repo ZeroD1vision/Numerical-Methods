@@ -8,7 +8,7 @@ ifneq ($(NO_COLOR),1)
 endif
 endif
 
-BINARY_NAME=numerical-methods-task07
+BINARY_NAME=numerical-methods-task08
 BUILD_DIR=../../bin
 
 .PHONY: all build run fmt clean help
